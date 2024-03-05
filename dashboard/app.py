@@ -9,7 +9,10 @@ import urllib
 from func import BrazilMapPlotter
 import matplotlib.image as mpimg
 
-df_all = pd.read_csv('df_all.csv')
+url = "https://drive.google.com/file/d/1lRn4glI2iyxBa2jNJhPuKYViYppi0mwN/view?usp=sharing"
+file_id=url.split('/')[-2]
+dwn_url='https://drive.google.com/uc?id=' + file_id
+df_all = pd.read_csv(dwn_url)
 
 # ==========================
 def df_create_by_product(df):
@@ -20,7 +23,11 @@ def df_create_by_product(df):
 df_most_and_least_purchased_products=df_create_by_product(df_all)
 
 # ==========================
-geolocation = pd.read_csv('geolocation_data.csv')
+url = "https://drive.google.com/file/d/13qsmSQKJnpha03HGMay28vOAwHBAq8_y/view?usp=sharing"
+file_id=url.split('/')[-2]
+dwn_url='https://drive.google.com/uc?id=' + file_id
+geolocation = pd.read_csv(dwn_url)
+
 data = geolocation.drop_duplicates(subset='customer_unique_id')
 
 map_plot = BrazilMapPlotter(data, plt, mpimg, urllib, st)
