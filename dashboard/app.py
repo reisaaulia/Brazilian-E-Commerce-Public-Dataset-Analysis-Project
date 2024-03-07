@@ -9,10 +9,7 @@ import urllib
 from func import BrazilMapPlotter
 import matplotlib.image as mpimg
 
-url = "https://drive.google.com/file/d/1lRn4glI2iyxBa2jNJhPuKYViYppi0mwN/view?usp=sharing"
-file_id=url.split('/')[-2]
-dwn_url='https://drive.google.com/uc?id=' + file_id
-df_all = pd.read_csv(dwn_url)
+df_all = pd.read_csv('df_all.csv')
 
 # ==========================
 def df_create_by_product(df):
@@ -23,11 +20,44 @@ def df_create_by_product(df):
 df_most_and_least_purchased_products=df_create_by_product(df_all)
 
 # ==========================
-url = "https://drive.google.com/file/d/13qsmSQKJnpha03HGMay28vOAwHBAq8_y/view?usp=sharing"
-file_id=url.split('/')[-2]
-dwn_url='https://drive.google.com/uc?id=' + file_id
-geolocation = pd.read_csv(dwn_url)
+datetime_columns = ["order_approved_at"]
+for column in datetime_columns:
+    df_all[column] = pd.to_datetime(df_all[column])
 
+def number_order_per_month(df):
+    df_monthly = df.resample(rule='M', on='order_approved_at').agg({
+        "order_id": "size",
+    })
+    df_monthly.index = df_monthly.index.strftime('%B')
+    df_monthly = df_monthly.reset_index()
+    df_monthly.rename(columns={
+        "order_id": "order_count",
+    }, inplace=True)
+    df_monthly = df_monthly.sort_values('order_count').drop_duplicates('order_approved_at', keep='last')
+    month_mapping = {
+        "January": 1,
+        "February": 2,
+        "March": 3,
+        "April": 4,
+        "May": 5,
+        "June": 6,
+        "July": 7,
+        "August": 8,
+        "September": 9,
+        "October": 10,
+        "November": 11,
+        "December": 12
+    }
+
+    df_monthly["month_numeric"] = df_monthly["order_approved_at"].map(month_mapping)
+    df_monthly = df_monthly.sort_values("month_numeric")
+    df_monthly = df_monthly.drop("month_numeric", axis=1)
+    return df_monthly
+
+daily_orders_df=number_order_per_month(df_all)
+
+# ==========================
+geolocation = pd.read_csv('geolocation_data.csv')
 data = geolocation.drop_duplicates(subset='customer_unique_id')
 
 map_plot = BrazilMapPlotter(data, plt, mpimg, urllib, st)
@@ -45,10 +75,10 @@ rating_by_customers,maximal_score,df_rating_service=rating_cust_df(df_all)
 # SideBar
 with st.sidebar:
     st.image("https://upload.wikimedia.org/wikipedia/commons/7/77/Streamlit-logo-primary-colormark-darktext.png")
-    st.write('Proyek Analisis Data: Brazilian E-Commerce Public Dataset')
+    st.write('Proyek Analisis Data: E-Commerce Public Dataset')
 
 # Header
-st.header('Proyek Analisis Data: Brazilian E-Commerce Public Dataset')
+st.header('Proyek Analisis Data: E-Commerce Public Dataset')
 
 # Most and Least Purchased Products
 st.subheader("Most and Least Purchased Products")
@@ -96,6 +126,37 @@ plt.suptitle("Most and Least Sold Products", fontsize=22)
 st.pyplot(fig)
 
 st.write('Berdasarkan grafik yang diperoleh, produk yang memiliki jumlah pembelian paling tinggi adalah **bed_bath_table** , sedangkan produk yang memiliki jumlah pembelian paling rendah adalah **security_and_services**.')
+
+# Monthly Order Counts in 2018
+st.subheader("Monthly Order Counts in 2018")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    high_order_num = daily_orders_df['order_count'].max()
+    high_order_month=daily_orders_df[daily_orders_df['order_count'] == daily_orders_df['order_count'].max()]['order_approved_at'].values[0]
+    st.markdown(f"Highest orders in {high_order_month} : **{high_order_num}**")
+
+with col2:
+    low_order = daily_orders_df['order_count'].min()
+    low_order_month=daily_orders_df[daily_orders_df['order_count'] == daily_orders_df['order_count'].min()]['order_approved_at'].values[0]
+    st.markdown(f"Lowest orders in {low_order_month} : **{low_order}**")
+
+fig, ax = plt.subplots(figsize=(16, 8))
+ax.plot(
+    daily_orders_df["order_approved_at"],
+    daily_orders_df["order_count"],
+    marker='o',
+    linewidth=2,
+    color="#124076",
+)
+plt.xticks(rotation=45)
+ax.tick_params(axis='y', labelsize=20)
+ax.tick_params(axis='x', labelsize=15)
+
+st.pyplot(fig)
+
+st.write('Berdasarkan grafik yang diperoleh, di tahun 2018, jumlah pembelian tertinggi terdapat di bulan **November** dan jumlah pembelian terendah terdapat di bulan **September**.')
 
 # The region of Brazil with the highest customer concentration.
 st.subheader("Customers Demographic")
